@@ -143,7 +143,6 @@ object DateParser {
 
     private fun extractFromLine(line: String, context: DateContext): List<DateCandidate> {
         val results = mutableListOf<DateCandidate>()
-        val uppercaseLine = line.uppercase()
 
         // 1. Try ISO Pattern (yyyy-MM-dd or yyyy/MM/dd)
         PATTERN_ISO.findAll(line).forEach { match ->

@@ -6,7 +6,9 @@ import com.segarstok.domain.model.BatchStatus
 import com.segarstok.domain.model.StockBatch
 import com.segarstok.domain.usecase.DeleteBatchUseCase
 import com.segarstok.domain.usecase.GetBatchByIdUseCase
+import com.segarstok.domain.usecase.ReduceStockQuantityUseCase
 import com.segarstok.domain.usecase.UpdateBatchStatusUseCase
+import com.segarstok.domain.usecase.UpdateBatchUseCase
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -21,6 +23,8 @@ class BatchDetailViewModel(
     private val batchId: Long,
     private val getBatchByIdUseCase: GetBatchByIdUseCase,
     private val updateBatchStatusUseCase: UpdateBatchStatusUseCase,
+    private val updateBatchUseCase: UpdateBatchUseCase,
+    private val reduceStockQuantityUseCase: ReduceStockQuantityUseCase,
     private val deleteBatchUseCase: DeleteBatchUseCase
 ) : ViewModel() {
 
@@ -50,6 +54,30 @@ class BatchDetailViewModel(
                 _uiState.value = _uiState.value.copy(isLoading = false, isActionSuccess = true)
             }.onFailure { err ->
                 _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = err.message ?: "Gagal memperbarui status batch")
+            }
+        }
+    }
+
+    fun updateBatch(updatedBatch: StockBatch) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val result = updateBatchUseCase(updatedBatch)
+            result.onSuccess {
+                _uiState.value = _uiState.value.copy(isLoading = false, isActionSuccess = true)
+            }.onFailure { err ->
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = err.message ?: "Gagal mengedit data batch")
+            }
+        }
+    }
+
+    fun reduceQuantity(reduceAmount: Double) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val result = reduceStockQuantityUseCase(batchId, reduceAmount)
+            result.onSuccess {
+                _uiState.value = _uiState.value.copy(isLoading = false, isActionSuccess = true)
+            }.onFailure { err ->
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = err.message ?: "Gagal mengurangi kuantitas stok")
             }
         }
     }

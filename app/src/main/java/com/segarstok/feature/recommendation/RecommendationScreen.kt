@@ -5,65 +5,27 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.segarstok.core.design.component.UrgencyBadge
 import com.segarstok.core.design.theme.Spacing
-import com.segarstok.domain.model.UrgencyLevel
-
-data class DummyRecommendationItem(
-    val id: Long,
-    val productName: String,
-    val category: String,
-    val quantity: String,
-    val daysLeftText: String,
-    val urgencyLevel: UrgencyLevel,
-    val recommendationText: String,
-    val promoSimText: String?,
-    val marginWarning: String?
-)
+import com.segarstok.core.ui.ViewModelFactory
+import com.segarstok.domain.recommendation.BatchRecommendation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecommendationScreen(
     onNavigateToBatchDetail: (Long) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val dummyRecommendations = listOf(
-        DummyRecommendationItem(
-            id = 1,
-            productName = "Nugget Ayam 500g",
-            category = "Frozen Food",
-            quantity = "12 pack",
-            daysLeftText = "Sisa 5 Hari",
-            urgencyLevel = UrgencyLevel.NEAR,
-            recommendationText = "Diskon Terbatas 10% / Bundling. Tawarkan ke pelanggan prioritas. Pertahankan penyimpanan beku.",
-            promoSimText = "Harga Promo: Rp 13.500 | Est. Margin Kotor: Rp 3.500/unit",
-            marginWarning = null
-        ),
-        DummyRecommendationItem(
-            id = 2,
-            productName = "Roti Isi Cokelat",
-            category = "Bakery",
-            quantity = "5 pcs",
-            daysLeftText = "Sisa 1 Hari",
-            urgencyLevel = UrgencyLevel.URGENT,
-            recommendationText = "Promosi Segera / Paket Hemat Hari Berjalan. Evaluasi jumlah produksi berikutnya.",
-            promoSimText = "Harga Promo: Rp 9.000 | Est. Margin Kotor: Rp 1.000/unit",
-            marginWarning = null
-        ),
-        DummyRecommendationItem(
-            id = 3,
-            productName = "Sosis Sapi 1kg",
-            category = "Frozen Food",
-            quantity = "8 pack",
-            daysLeftText = "Sudah Lewat Tanggal",
-            urgencyLevel = UrgencyLevel.EXPIRED,
-            recommendationText = "⛔ Hentikan penjualan segera & keluarkan dari stok tersedia. Jangan dijual, didiskon, atau dibekukan ulang.",
-            promoSimText = null,
-            marginWarning = "Produk telah melewati tanggal kedaluwarsa label."
-        )
+    modifier: Modifier = Modifier,
+    viewModel: RecommendationViewModel = viewModel(
+        factory = ViewModelFactory.getInstance(LocalContext.current)
     )
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -77,94 +39,178 @@ fun RecommendationScreen(
         },
         modifier = modifier
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(Spacing.medium),
-            verticalArrangement = Arrangement.spacedBy(Spacing.medium)
-        ) {
-            // Food Safety & Rule Transparency Guardrail Banner
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(Spacing.medium)) {
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(Spacing.medium),
+                verticalArrangement = Arrangement.spacedBy(Spacing.medium)
+            ) {
+                // Food Safety Guardrail Banner
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(Spacing.medium)) {
+                            Text(
+                                text = "💡 Prinsip Rekomendasi & Keamanan Pangan",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.extraSmall))
+                            Text(
+                                text = "• Rekomendasi bersifat saran operasional berbasis aturan transparan.\n" +
+                                       "• Produk lewat tanggal WAJIB dihentikan penjualannya & tidak boleh didiskon.\n" +
+                                       "• Aplikasi tidak mengubah harga atau stok secara otomatis tanpa persetujuan Anda.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+
+                // Discount Rate Selector Chips
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall)) {
                         Text(
-                            text = "💡 Prinsip Rekomendasi & Keamanan Pangan",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            text = "Simulasi Tingkat Diskon Promosi:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.height(Spacing.extraSmall))
-                        Text(
-                            text = "• Rekomendasi bersifat saran operasional berbasis aturan transparan.\n" +
-                                   "• Produk lewat tanggal WAJIB dihentikan penjualannya.\n" +
-                                   "• Aplikasi tidak mengubah harga atau stok secara otomatis tanpa persetujuan Anda.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.small)
+                        ) {
+                            val rates = listOf(0.10, 0.20, 0.30)
+                            rates.forEach { rate ->
+                                val percentText = "${(rate * 100).toInt()}%"
+                                val isSelected = uiState.selectedDiscountRate == rate
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { viewModel.onDiscountRateChange(rate) },
+                                    label = { Text("Diskon $percentText") }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (uiState.recommendations.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(Spacing.large),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Belum ada stok aktif yang memerlukan rekomendasi.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    items(uiState.recommendations) { item ->
+                        RecommendationCardItem(
+                            item = item,
+                            onClick = { onNavigateToBatchDetail(item.batchId) }
                         )
                     }
                 }
             }
+        }
+    }
+}
 
-            // Recommendations List Items
-            items(dummyRecommendations) { item ->
+@Composable
+private fun RecommendationCardItem(
+    item: BatchRecommendation,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(Spacing.small)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = item.productName,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                UrgencyBadge(urgencyLevel = item.urgencyLevel)
+            }
+
+            val daysText = if (item.daysLeft < 0) {
+                "Kedaluwarsa (${-item.daysLeft} hari lalu)"
+            } else if (item.daysLeft == 0L) {
+                "Hari H Kedaluwarsa"
+            } else {
+                "Sisa ${item.daysLeft} Hari"
+            }
+
+            Text(
+                text = "${item.category.label} • ${item.quantity} ${item.unit} • $daysText",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            HorizontalDivider()
+
+            Text(
+                text = "Arah Tindakan: ${item.actionDirection}",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (item.isExpiredGuardrail) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            )
+
+            Text(
+                text = item.detailedAdvice,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Text(
+                text = "💡 Panduan Kategori (${item.category.label}): ${item.categoryAdvice}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            item.promoSimulation?.let { sim ->
                 Card(
-                    onClick = { onNavigateToBatchDetail(item.id) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(
-                        modifier = Modifier.padding(Spacing.medium),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.small)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    Column(modifier = Modifier.padding(Spacing.small)) {
+                        Text(
+                            text = sim.formattedText,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        if (sim.marginWarning != null) {
+                            Spacer(modifier = Modifier.height(Spacing.extraSmall))
                             Text(
-                                text = item.productName,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            UrgencyBadge(urgencyLevel = item.urgencyLevel)
-                        }
-
-                        Text(
-                            text = "${item.category} • ${item.quantity} • ${item.daysLeftText}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        HorizontalDivider()
-
-                        Text(
-                            text = "Saran Tindakan:",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = item.recommendationText,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-
-                        if (item.promoSimText != null) {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = item.promoSimText,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    modifier = Modifier.padding(Spacing.small)
-                                )
-                            }
-                        }
-
-                        if (item.marginWarning != null) {
-                            Text(
-                                text = item.marginWarning,
-                                style = MaterialTheme.typography.labelMedium,
+                                text = sim.marginWarning,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )
                         }

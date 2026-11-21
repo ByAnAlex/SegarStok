@@ -1,7 +1,6 @@
 package com.segarstok.feature.addbatch
 
 import android.content.Context
-import android.net.Uri
 import com.segarstok.domain.usecase.AddBatchUseCase
 import com.segarstok.domain.usecase.FakeStockRepository
 import com.segarstok.ml.ocr.OcrResult
@@ -17,7 +16,6 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito.mock
 import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -45,8 +43,7 @@ class AddBatchViewModelOcrTest {
 
     @Test
     fun selectImage_ocrSuccess_updatesUiStateWithRawText() = runTest {
-        val mockContext = mock(Context::class.java)
-        val mockUri = mock(Uri::class.java)
+        val testImageUri = "content://dummy/label.jpg"
 
         fakeOcrService.resultToReturn = Result.success(
             OcrResult(
@@ -60,11 +57,11 @@ class AddBatchViewModelOcrTest {
             )
         )
 
-        viewModel.onImageSelected(mockUri, mockContext)
+        viewModel.onImageSelected(testImageUri)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(mockUri, state.selectedImageUri)
+        assertEquals(testImageUri, state.selectedImageUri)
         assertFalse(state.isOcrLoading)
         assertEquals("EXP 25/12/2026\nLOT 98213", state.ocrRawText)
         assertEquals("OCR_SCANNED", state.dateEntryMethod)
@@ -79,14 +76,13 @@ class AddBatchViewModelOcrTest {
 
     @Test
     fun selectCandidate_updatesExpiryDateStringAndMethodToOcrConfirmed() = runTest {
-        val mockContext = mock(Context::class.java)
-        val mockUri = mock(Uri::class.java)
+        val testImageUri = "content://dummy/label.jpg"
 
         fakeOcrService.resultToReturn = Result.success(
             OcrResult(fullText = "EXP 25/12/2026")
         )
 
-        viewModel.onImageSelected(mockUri, mockContext)
+        viewModel.onImageSelected(testImageUri)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val parseResult = viewModel.uiState.value.dateParseResult
@@ -103,14 +99,13 @@ class AddBatchViewModelOcrTest {
 
     @Test
     fun expiryDateChange_manuallyEdited_resetsMethodToManual() = runTest {
-        val mockContext = mock(Context::class.java)
-        val mockUri = mock(Uri::class.java)
+        val testImageUri = "content://dummy/label.jpg"
 
         fakeOcrService.resultToReturn = Result.success(
             OcrResult(fullText = "EXP 25/12/2026")
         )
 
-        viewModel.onImageSelected(mockUri, mockContext)
+        viewModel.onImageSelected(testImageUri)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val parseResult = viewModel.uiState.value.dateParseResult
@@ -129,12 +124,11 @@ class AddBatchViewModelOcrTest {
 
     @Test
     fun selectImage_ocrEmptyText_setsErrorMessage() = runTest {
-        val mockContext = mock(Context::class.java)
-        val mockUri = mock(Uri::class.java)
+        val testImageUri = "content://dummy/label.jpg"
 
         fakeOcrService.resultToReturn = Result.success(OcrResult(fullText = "   "))
 
-        viewModel.onImageSelected(mockUri, mockContext)
+        viewModel.onImageSelected(testImageUri)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -146,12 +140,11 @@ class AddBatchViewModelOcrTest {
 
     @Test
     fun selectImage_ocrFailure_setsOcrErrorMessage() = runTest {
-        val mockContext = mock(Context::class.java)
-        val mockUri = mock(Uri::class.java)
+        val testImageUri = "content://dummy/label.jpg"
 
         fakeOcrService.resultToReturn = Result.failure(Exception("Gagal membaca file gambar"))
 
-        viewModel.onImageSelected(mockUri, mockContext)
+        viewModel.onImageSelected(testImageUri)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -162,11 +155,10 @@ class AddBatchViewModelOcrTest {
 
     @Test
     fun clearSelectedImage_resetsOcrStateAndEntryMethodToManual() = runTest {
-        val mockContext = mock(Context::class.java)
-        val mockUri = mock(Uri::class.java)
+        val testImageUri = "content://dummy/label.jpg"
 
         fakeOcrService.resultToReturn = Result.success(OcrResult(fullText = "EXP 25/12/2026"))
-        viewModel.onImageSelected(mockUri, mockContext)
+        viewModel.onImageSelected(testImageUri)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.clearSelectedImage()
@@ -183,7 +175,7 @@ class AddBatchViewModelOcrTest {
 class FakeOcrService : OcrService {
     var resultToReturn: Result<OcrResult> = Result.success(OcrResult(""))
 
-    override suspend fun processImage(imageUri: Uri, context: Context): Result<OcrResult> {
+    override suspend fun processImage(imageUri: Any, context: Context?): Result<OcrResult> {
         return resultToReturn
     }
 }

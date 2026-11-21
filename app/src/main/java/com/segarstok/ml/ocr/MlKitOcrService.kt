@@ -14,9 +14,17 @@ class MlKitOcrService : OcrService {
         TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     }
 
-    override suspend fun processImage(imageUri: Uri, context: Context): Result<OcrResult> {
+    override suspend fun processImage(imageUri: Any, context: Context?): Result<OcrResult> {
+        if (context == null) {
+            return Result.failure(IllegalArgumentException("Context tidak boleh null untuk pemrosesan ML Kit"))
+        }
         return try {
-            val inputImage = InputImage.fromFilePath(context, imageUri)
+            val inputImage = when (imageUri) {
+                is Uri -> InputImage.fromFilePath(context, imageUri)
+                is String -> InputImage.fromFilePath(context, Uri.parse(imageUri))
+                else -> return Result.failure(IllegalArgumentException("Format gambar tidak didukung"))
+            }
+
             suspendCancellableCoroutine { continuation ->
                 recognizer.process(inputImage)
                     .addOnSuccessListener { visionText ->

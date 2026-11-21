@@ -32,7 +32,7 @@ data class AddBatchUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isSavedSuccess: Boolean = false,
-    val selectedImageUri: Uri? = null,
+    val selectedImageUri: Any? = null,
     val isOcrLoading: Boolean = false,
     val ocrResult: OcrResult? = null,
     val ocrRawText: String? = null,
@@ -99,7 +99,8 @@ class AddBatchViewModel(
         _uiState.value = _uiState.value.copy(notes = notes)
     }
 
-    fun onImageSelected(imageUri: Uri, context: Context) {
+    fun onImageSelected(imageUri: Any?, context: Context? = null) {
+        if (imageUri == null) return
         _uiState.value = _uiState.value.copy(
             selectedImageUri = imageUri,
             isOcrLoading = true,

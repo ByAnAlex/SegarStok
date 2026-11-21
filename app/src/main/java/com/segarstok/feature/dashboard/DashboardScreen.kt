@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.segarstok.core.design.component.EmptyStateContainer
 import com.segarstok.core.design.component.LoadingStateContainer
@@ -56,74 +57,121 @@ fun DashboardScreen(
                     .padding(Spacing.medium),
                 verticalArrangement = Arrangement.spacedBy(Spacing.medium)
             ) {
-                // Header Card - Expiry Risk Summary
+                // Header Card - Expiry Risk Summary (Loss Monitor)
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                     ) {
-                        Column(modifier = Modifier.padding(Spacing.medium)) {
+                        Column(
+                            modifier = Modifier.padding(Spacing.medium),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall)
+                        ) {
                             Text(
-                                text = "Ringkasan Modal Berisiko",
+                                text = "Expiry Loss Monitor (Estimasi Modal Berisiko)",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
-                            Spacer(modifier = Modifier.height(Spacing.extraSmall))
                             Text(
                                 text = currencyFormat.format(uiState.totalRiskValue),
                                 style = MaterialTheme.typography.headlineLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            Text(
-                                text = "Modal dari batch berstatus AVAILABLE tersimpan di database",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Modal Berisiko Aktif:",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = currencyFormat.format(uiState.activeRiskValue),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "Modal Berisiko Lewat Tgl:",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = currencyFormat.format(uiState.expiredRiskValue),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+
+                            if (uiState.missingPriceBatchesCount > 0) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "ℹ️ ${uiState.missingPriceBatchesCount} batch belum diisi harga beli per unit.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
                         }
                     }
                 }
 
-                // Quick Stats Grid
+                // Urgency Breakdown Grid Section
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.small)
-                    ) {
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    Text(text = "Ringkasan Urgensi Kedaluwarsa", style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.height(Spacing.extraSmall))
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.small)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(Spacing.small),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text("${uiState.totalAvailableCount}", style = MaterialTheme.typography.titleLarge)
-                                Text("Tersedia", style = MaterialTheme.typography.labelMedium)
-                            }
+                            StatCard(
+                                title = "Mendesak (1-3H)",
+                                count = uiState.urgentCount,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatCard(
+                                title = "Hari H (0H)",
+                                count = uiState.dueTodayCount,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatCard(
+                                title = "Lewat Tgl (<0H)",
+                                count = uiState.expiredCount,
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.small)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(Spacing.small),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text("${uiState.urgentCount}", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.error)
-                                Text("Mendesak", style = MaterialTheme.typography.labelMedium)
-                            }
-                        }
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(Spacing.small),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text("${uiState.expiredCount}", style = MaterialTheme.typography.titleLarge)
-                                Text("Lewat Tgl", style = MaterialTheme.typography.labelMedium)
-                            }
+                            StatCard(
+                                title = "Mendekati (4-7H)",
+                                count = uiState.nearCount,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatCard(
+                                title = "Perhatian (8-14H)",
+                                count = uiState.attentionCount,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatCard(
+                                title = "Normal (>14H)",
+                                count = uiState.normalCount,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
@@ -152,15 +200,15 @@ fun DashboardScreen(
                 // Urgent Batches Section Title
                 item {
                     Text(
-                        text = "Batch Prioritas Kedaluwarsa Terdekat",
-                        style = MaterialTheme.typography.titleLarge
+                        text = "Batch Prioritas (Kedaluwarsa Terdekat)",
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
 
                 if (uiState.priorityBatches.isEmpty()) {
                     item {
                         EmptyStateContainer(
-                            title = "Belum Ada Batch Stok",
+                            title = "Belum Ada Batch Stok Tersedia",
                             message = "Mulai mencatat batch stok pertama Anda untuk memantau tanggal kedaluwarsa.",
                             actionLabel = "+ Tambah Batch",
                             onActionClick = onNavigateToAddBatch
@@ -168,6 +216,13 @@ fun DashboardScreen(
                     }
                 } else {
                     items(uiState.priorityBatches) { item ->
+                        val daysLeft = item.daysLeft()
+                        val daysLeftText = when {
+                            daysLeft < 0 -> "Lewat ${-daysLeft} hari (${item.expiryDate})"
+                            daysLeft == 0L -> "Kedaluwarsa HARI INI (${item.expiryDate})"
+                            else -> "Sisa $daysLeft hari (${item.expiryDate})"
+                        }
+
                         Card(
                             onClick = { onNavigateToBatchDetail(item.id) },
                             modifier = Modifier.fillMaxWidth()
@@ -189,6 +244,11 @@ fun DashboardScreen(
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                    Text(
+                                        text = daysLeftText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
                                 }
                                 UrgencyBadge(urgencyLevel = item.urgencyLevel())
                             }
@@ -196,6 +256,27 @@ fun DashboardScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StatCard(
+    title: String,
+    count: Int,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.small),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("$count", style = MaterialTheme.typography.titleLarge, color = color)
+            Text(title, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

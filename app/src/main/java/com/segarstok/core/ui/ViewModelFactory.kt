@@ -7,6 +7,7 @@ import com.segarstok.SegarStokApp
 import com.segarstok.feature.addbatch.AddBatchViewModel
 import com.segarstok.feature.batchdetail.BatchDetailViewModel
 import com.segarstok.feature.dashboard.DashboardViewModel
+import com.segarstok.feature.recommendation.RecommendationViewModel
 import com.segarstok.feature.stocklist.StockListViewModel
 
 class ViewModelFactory(
@@ -27,13 +28,18 @@ class ViewModelFactory(
                 StockListViewModel(app.getBatchesUseCase) as T
             }
             modelClass.isAssignableFrom(DashboardViewModel::class.java) -> {
-                DashboardViewModel(app.getBatchesUseCase, app.repository) as T
+                DashboardViewModel(app.getBatchesUseCase) as T
+            }
+            modelClass.isAssignableFrom(RecommendationViewModel::class.java) -> {
+                RecommendationViewModel(app.getRecommendationsUseCase) as T
             }
             modelClass.isAssignableFrom(BatchDetailViewModel::class.java) -> {
                 BatchDetailViewModel(
                     batchId = batchId,
                     getBatchByIdUseCase = app.getBatchByIdUseCase,
                     updateBatchStatusUseCase = app.updateBatchStatusUseCase,
+                    updateBatchUseCase = app.updateBatchUseCase,
+                    reduceStockQuantityUseCase = app.reduceStockQuantityUseCase,
                     deleteBatchUseCase = app.deleteBatchUseCase
                 ) as T
             }
