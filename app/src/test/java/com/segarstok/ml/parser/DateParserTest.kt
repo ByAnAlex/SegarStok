@@ -158,4 +158,100 @@ class DateParserTest {
         assertEquals(LocalDate.of(2025, 12, 15), cand.date)
         assertEquals(DateContext.EXPIRY, cand.context)
     }
+
+    @Test
+    fun test16_exp_continuous_ddMMyy() {
+        val result = DateParser.parse("EXP:110521 24:00")
+        assertTrue(result is DateParseResult.Candidates)
+        val cand = (result as DateParseResult.Candidates).items[0]
+        assertEquals(LocalDate.of(2021, 5, 11), cand.date)
+        assertEquals(DateContext.EXPIRY, cand.context)
+    }
+
+    @Test
+    fun test17_mfg_continuous_ddMMyy() {
+        val result = DateParser.parse("MFG:060521 08:53")
+        assertTrue(result is DateParseResult.Candidates)
+        val cand = (result as DateParseResult.Candidates).items[0]
+        assertEquals(LocalDate.of(2021, 5, 6), cand.date)
+        assertEquals(DateContext.PRODUCTION, cand.context)
+    }
+
+    @Test
+    fun test18_mfgAndExp_continuous_both() {
+        val input = "MFG:060521 08:53\nEXP:110521 24:00"
+        val result = DateParser.parse(input)
+        assertTrue(result is DateParseResult.Candidates)
+        val items = (result as DateParseResult.Candidates).items
+        assertEquals(2, items.size)
+
+        val expiryCand = items.find { it.context == DateContext.EXPIRY }
+        val prodCand = items.find { it.context == DateContext.PRODUCTION }
+
+        assertNotNull(expiryCand)
+        assertNotNull(prodCand)
+
+        assertEquals(LocalDate.of(2021, 5, 11), expiryCand!!.date)
+        assertEquals(LocalDate.of(2021, 5, 6), prodCand!!.date)
+
+        // Verify Expiry candidate is ranked first
+        assertEquals(DateContext.EXPIRY, items[0].context)
+    }
+
+    @Test
+    fun test19_dotMatrixCanLid_mfg040914_exp040917() {
+        val input = "MFG: 040914\nEXP: 040917"
+        val result = DateParser.parse(input)
+        assertTrue(result is DateParseResult.Candidates)
+        val items = (result as DateParseResult.Candidates).items
+        assertEquals(2, items.size)
+
+        val expiryCand = items.find { it.context == DateContext.EXPIRY }
+        val prodCand = items.find { it.context == DateContext.PRODUCTION }
+
+        assertNotNull(expiryCand)
+        assertNotNull(prodCand)
+
+        assertEquals(LocalDate.of(2017, 9, 4), expiryCand!!.date)
+        assertEquals(LocalDate.of(2014, 9, 4), prodCand!!.date)
+
+        // Expiry candidate (04/09/2017) is first candidate
+        assertEquals(LocalDate.of(2017, 9, 4), items[0].date)
+    }
+
+    @Test
+    fun test20_dotMatrixTypoKeywords_nfgAndFxp() {
+        val input = "NFG: 040914\nFXP: 040917"
+        val result = DateParser.parse(input)
+        assertTrue(result is DateParseResult.Candidates)
+        val items = (result as DateParseResult.Candidates).items
+        assertEquals(2, items.size)
+
+        val expiryCand = items.find { it.context == DateContext.EXPIRY }
+        val prodCand = items.find { it.context == DateContext.PRODUCTION }
+
+        assertNotNull(expiryCand)
+        assertNotNull(prodCand)
+
+        assertEquals(LocalDate.of(2017, 9, 4), expiryCand!!.date)
+        assertEquals(LocalDate.of(2014, 9, 4), prodCand!!.date)
+    }
+
+    @Test
+    fun test21_pairInferenceNoKeywords_earlierIsProdLaterIsExp() {
+        val input = "040914\n040917"
+        val result = DateParser.parse(input)
+        assertTrue(result is DateParseResult.Candidates)
+        val items = (result as DateParseResult.Candidates).items
+        assertEquals(2, items.size)
+
+        val expiryCand = items.find { it.context == DateContext.EXPIRY }
+        val prodCand = items.find { it.context == DateContext.PRODUCTION }
+
+        assertNotNull(expiryCand)
+        assertNotNull(prodCand)
+
+        assertEquals(LocalDate.of(2017, 9, 4), expiryCand!!.date)
+        assertEquals(LocalDate.of(2014, 9, 4), prodCand!!.date)
+    }
 }

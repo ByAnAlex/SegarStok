@@ -1,6 +1,7 @@
 package com.segarstok.core.design.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,7 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.segarstok.core.design.theme.*
 import com.segarstok.domain.model.BatchStatus
 import com.segarstok.domain.model.UrgencyLevel
@@ -19,24 +22,28 @@ fun UrgencyBadge(
     urgencyLevel: UrgencyLevel,
     modifier: Modifier = Modifier
 ) {
-    val (bgColor, textColor) = when (urgencyLevel) {
-        UrgencyLevel.NORMAL -> UrgencyNormalBg to UrgencyNormalText
-        UrgencyLevel.ATTENTION -> UrgencyAttentionBg to UrgencyAttentionText
-        UrgencyLevel.NEAR -> UrgencyNearBg to UrgencyNearText
-        UrgencyLevel.URGENT -> UrgencyUrgentBg to UrgencyUrgentText
-        UrgencyLevel.DUE_TODAY -> UrgencyDueTodayBg to UrgencyDueTodayText
-        UrgencyLevel.EXPIRED -> UrgencyExpiredBg to UrgencyExpiredText
+    val (bgColor, borderColor, textColor) = when (urgencyLevel) {
+        UrgencyLevel.NORMAL -> Triple(NormalBg, NormalBorder, NormalText)
+        UrgencyLevel.ATTENTION -> Triple(AttentionBg, AttentionBorder, AttentionText)
+        UrgencyLevel.NEAR -> Triple(WarningBg, WarningBorder, WarningText)
+        UrgencyLevel.URGENT -> Triple(UrgentBg, UrgentBorder, UrgentText)
+        UrgencyLevel.DUE_TODAY -> Triple(ExpiredBg, ExpiredBorder, ExpiredText)
+        UrgencyLevel.EXPIRED -> Triple(ExpiredBg, ExpiredBorder, ExpiredText)
     }
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(Spacing.badgeCornerRadius))
+            .clip(RoundedCornerShape(6.dp))
             .background(bgColor)
-            .padding(horizontal = Spacing.small, vertical = Spacing.extraSmall)
+            .border(1.dp, borderColor, RoundedCornerShape(6.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
-            text = "${urgencyLevel.label} (${urgencyLevel.description})",
-            style = MaterialTheme.typography.labelMedium,
+            text = urgencyLevel.label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.sp
+            ),
             color = textColor
         )
     }
@@ -47,21 +54,25 @@ fun BatchStatusBadge(
     status: BatchStatus,
     modifier: Modifier = Modifier
 ) {
-    val (bgColor, textColor) = when (status) {
-        BatchStatus.AVAILABLE -> PrimaryGreenLight to PrimaryGreenDark
-        BatchStatus.SOLD_OR_USED -> SurfaceVariantLight to TextSecondary
-        BatchStatus.DISCARDED -> UrgencyUrgentBg to UrgencyUrgentText
+    val (bgColor, borderColor, textColor) = when (status) {
+        BatchStatus.AVAILABLE -> Triple(NormalBg, NormalBorder, NormalText)
+        BatchStatus.SOLD_OR_USED -> Triple(CardSurface, CardBorder, Slate500)
+        BatchStatus.DISCARDED -> Triple(ExpiredBg, ExpiredBorder, ExpiredText)
     }
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(Spacing.badgeCornerRadius))
+            .clip(RoundedCornerShape(6.dp))
             .background(bgColor)
-            .padding(horizontal = Spacing.small, vertical = Spacing.extraSmall)
+            .border(1.dp, borderColor, RoundedCornerShape(6.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
             text = status.label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.sp
+            ),
             color = textColor
         )
     }

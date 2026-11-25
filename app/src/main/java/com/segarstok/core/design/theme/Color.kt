@@ -2,37 +2,73 @@ package com.segarstok.core.design.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Palette - Fresh Emerald & Teal
-val PrimaryGreen = Color(0xFF059669)
-val PrimaryGreenLight = Color(0xFFD1FAE5)
-val PrimaryGreenDark = Color(0xFF047857)
+// Primary Brand Palette - Deep Teal / Forest Emerald
+val PrimaryTeal = Color(0xFF0F766E)
+val PrimaryTealLight = Color(0xFFF0FDFA)
+val PrimaryTealContainer = Color(0xFFCCFBF1)
+val PrimaryTealDark = Color(0xFF115E59)
 
-val SecondaryTeal = Color(0xFF0D9488)
-val SecondaryTealLight = Color(0xFFCCFBF1)
+// Neutral SaaS Canvas & Text Hierarchy
+val CanvasBackground = Color(0xFFF8FAFC) // Cool Off-White
+val CardSurface = Color(0xFFFFFFFF)
+val CardBorder = Color(0xFFE2E8F0) // 1px Hairline Slate 200
+val DividerColor = Color(0xFFF1F5F9)
 
-val BackgroundLight = Color(0xFFF8FAFC)
-val SurfaceLight = Color(0xFFFFFFFF)
+val Slate900 = Color(0xFF0F172A) // Primary Titles/Numbers
+val Slate700 = Color(0xFF334155) // Medium Text
+val Slate500 = Color(0xFF64748B) // Subtitles/Labels
+val Slate400 = Color(0xFF94A3B8) // Muted Text
+
+// Semantic Status Colors (Subtle Tints + High-Contrast Text)
+// Critical / Expired (<0H)
+val ExpiredBg = Color(0xFFFEF2F2)
+val ExpiredBorder = Color(0xFFFECACA)
+val ExpiredText = Color(0xFFDC2626)
+
+// Urgent (0-3H)
+val UrgentBg = Color(0xFFFFF1F2)
+val UrgentBorder = Color(0xFFFECDD3)
+val UrgentText = Color(0xFFE11D48)
+
+// Warning / Near (4-7H)
+val WarningBg = Color(0xFFFFFBEB)
+val WarningBorder = Color(0xFFFDE68A)
+val WarningText = Color(0xFFD97706)
+
+// Attention (8-14H)
+val AttentionBg = Color(0xFFFEFCE8)
+val AttentionBorder = Color(0xFFFEF08A)
+val AttentionText = Color(0xFFA16207)
+
+// Normal / Safe (>14H)
+val NormalBg = Color(0xFFF0FDF4)
+val NormalBorder = Color(0xFFA7F3D0)
+val NormalText = Color(0xFF15803D)
+
+// Legacy alias mappings for backward compatibility
+val PrimaryGreen = PrimaryTeal
+val PrimaryGreenLight = PrimaryTealLight
+val PrimaryGreenDark = PrimaryTealDark
+val SecondaryTeal = PrimaryTeal
+val SecondaryTealLight = PrimaryTealContainer
+
+val BackgroundLight = CanvasBackground
+val SurfaceLight = CardSurface
 val SurfaceVariantLight = Color(0xFFF1F5F9)
 
-val TextPrimary = Color(0xFF0F172A)
-val TextSecondary = Color(0xFF475569)
-val TextMuted = Color(0xFF94A3B8)
+val TextPrimary = Slate900
+val TextSecondary = Slate500
+val TextMuted = Slate400
 
-// Urgency Indicator Colors
-val UrgencyNormalBg = Color(0xFFDCFCE7)
-val UrgencyNormalText = Color(0xFF15803D)
-
-val UrgencyAttentionBg = Color(0xFFFEF3C7)
-val UrgencyAttentionText = Color(0xFFB45309)
-
-val UrgencyNearBg = Color(0xFFFFEDD5)
-val UrgencyNearText = Color(0xFFC2410C)
-
-val UrgencyUrgentBg = Color(0xFFFEE2E2)
-val UrgencyUrgentText = Color(0xFFB91C1C)
-
-val UrgencyDueTodayBg = Color(0xFFFCA5A5)
-val UrgencyDueTodayText = Color(0xFF7F1D1D)
-
-val UrgencyExpiredBg = Color(0xFFE2E8F0)
-val UrgencyExpiredText = Color(0xFF475569)
+val UrgencyNormalBg = NormalBg
+val UrgencyNormalText = NormalText
+val UrgencyAttentionBg = AttentionBg
+val UrgencyAttentionText = AttentionText
+val UrgencyNearBg = WarningBg
+val UrgencyNearText = WarningText
+val UrgencyUrgentBg = UrgentBg
+val UrgencyUrgentText = UrgentText
+val UrgencyDueTodayBg = ExpiredBg
+val UrgencyDueTodayText = ExpiredText
+val UrgencyExpiredBg = ExpiredBg
+val UrgencyExpiredText = ExpiredText

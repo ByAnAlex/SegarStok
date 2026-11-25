@@ -5,12 +5,14 @@ import java.time.LocalDate
 object DateParser {
 
     private val EXPIRY_KEYWORDS = listOf(
-        "EXP", "EX", "ED", "USE BY", "BEST BEFORE", "BB",
+        "EXP", "EX", "ED", "USE BY", "BEST BEFORE", "BB", "BBE",
+        "FXP", "EVP", "EXF", "ERF", "EXR", "EXPIRATION", "EXP DATE",
         "KEDALUWARSA", "KADALUWARSA", "BAIK DIGUNAKAN SEBELUM"
     )
 
     private val PRODUCTION_KEYWORDS = listOf(
-        "MFG", "MFD", "PROD", "MFG DATE", "TGL PRODUKSI", "TANGGAL PRODUKSI"
+        "MFG", "MFD", "PROD", "PRD", "NFG", "HFG", "WFG", "MPG", "MFC", "MFO", "MF6",
+        "NFC", "NFD", "PFG", "PEG", "MFG DATE", "TGL PRODUKSI", "TANGGAL PRODUKSI", "PRODUKSI"
     )
 
     private val MONTH_MAP = mapOf(
@@ -57,8 +59,19 @@ object DateParser {
     // 4. Numeric 2-digit year: dd/MM/yy, dd-MM-yy, dd.MM.yy
     private val PATTERN_NUMERIC_2DIGIT = Regex("""\b(0?[1-9]|[12]\d|3[01])[/.\\-](0?[1-9]|1[0-2])[/.\\-](\d{2})\b""")
 
-    // 5. Typos pattern (e.g. 2S/12/2026, 25/I2/2026, 25/12/2O26)
+    // 5. Space-separated: dd MM yyyy or dd MM yy (e.g. 11 05 21 or 11 05 2021)
+    private val PATTERN_SPACE_SEPARATED = Regex("""(?<!\d)(0?[1-9]|[12]\d|3[01])\s+(0?[1-9]|1[0-2])\s+(20\d{2}|\d{2})(?!\d)""")
+
+    // 6. Continuous 8-digit: ddMMyyyy or yyyyMMdd (e.g. 11052021 or 20210511)
+    private val PATTERN_CONTINUOUS_8DIGIT_DDMMYYYY = Regex("""(?<!\d)(0[1-9]|[12]\d|3[01])(0[1-9]|1[0-2])(20\d{2})(?!\d)""")
+    private val PATTERN_CONTINUOUS_8DIGIT_YYYYMMDD = Regex("""(?<!\d)(20\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?!\d)""")
+
+    // 7. Continuous 6-digit: ddMMyy (e.g. 110521, 060521 in MFG:060521 or EXP:110521)
+    private val PATTERN_CONTINUOUS_6DIGIT_DDMMYY = Regex("""(?<!\d)(0[1-9]|[12]\d|3[01])(0[1-9]|1[0-2])(\d{2})(?!\d)""")
+
+    // 8. Typos pattern
     private val PATTERN_TYPO_DATE = Regex("""\b([0-9SlIOZB]{1,2})[/.\\-]([0-9SlIOZB]{1,2})[/.\\-]([0-9SlIOZB]{2,4})\b""")
+    private val PATTERN_TYPO_CONTINUOUS = Regex("""(?<![0-9A-Za-z])([0-9SlIOZB]{6}|[0-9SlIOZB]{8})(?![0-9A-Za-z])""")
 
     fun parse(ocrText: String): DateParseResult {
         if (ocrText.isBlank()) {
@@ -68,15 +81,53 @@ object DateParser {
         val lines = ocrText.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val candidates = mutableListOf<DateCandidate>()
 
+        val normalizedLines = lines.map { normalizeDotMatrixLine(it) }
+
         for (i in lines.indices) {
             val line = lines[i]
-            val context = detectContext(lines, i)
+            val normalized = normalizedLines[i]
+
+            val context = detectContext(lines, normalizedLines, i)
             val extracted = extractFromLine(line, context)
             candidates.addAll(extracted)
+
+            if (normalized != line) {
+                val extractedNormalized = extractFromLine(normalized, context)
+                candidates.addAll(extractedNormalized)
+            }
         }
 
         if (candidates.isEmpty()) {
             return DateParseResult.NoCandidate
+        }
+
+        // Smart Pair Resolution for Manufacturing vs Expiry dates when two distinct dates exist
+        val distinctDates = candidates.map { it.date }.distinct()
+        if (distinctDates.size == 2) {
+            val sortedDates = distinctDates.sorted()
+            val earlierDate = sortedDates[0]
+            val laterDate = sortedDates[1]
+
+            // In food/beverage packaging, when 2 distinct dates are present on the same product item:
+            // The earlier date MUST BE Production (MFG), and the later date MUST BE Expiry (EXP).
+            for (i in candidates.indices) {
+                val cand = candidates[i]
+                if (cand.date == earlierDate) {
+                    candidates[i] = cand.copy(
+                        context = DateContext.PRODUCTION,
+                        confidence = CandidateConfidence.HIGH,
+                        warnings = cand.warnings.filterNot { it.contains("Kedaluwarsa", ignoreCase = true) } +
+                                "Diidentifikasi sebagai Tanggal Produksi (tanggal lebih awal dalam pasangan)"
+                    )
+                } else if (cand.date == laterDate) {
+                    candidates[i] = cand.copy(
+                        context = DateContext.EXPIRY,
+                        confidence = CandidateConfidence.HIGH,
+                        warnings = cand.warnings.filterNot { it.contains("Produksi", ignoreCase = true) } +
+                                "Diidentifikasi sebagai Tanggal Kedaluwarsa (tanggal lebih akhir dalam pasangan)"
+                    )
+                }
+            }
         }
 
         // Deduplicate candidates with same date & context
@@ -119,25 +170,42 @@ object DateParser {
         return DateParseResult.Candidates(sorted)
     }
 
-    private fun detectContext(lines: List<String>, index: Int): DateContext {
+    private fun detectContext(lines: List<String>, normalizedLines: List<String>, index: Int): DateContext {
         val currentLineUpper = lines[index].uppercase()
-        val currentHasExpiry = EXPIRY_KEYWORDS.any { currentLineUpper.contains(it) }
-        val currentHasProd = PRODUCTION_KEYWORDS.any { currentLineUpper.contains(it) }
+        val currentNormUpper = normalizedLines[index].uppercase()
+
+        val currentHasExpiry = EXPIRY_KEYWORDS.any { currentLineUpper.contains(it) || currentNormUpper.contains(it) }
+        val currentHasProd = PRODUCTION_KEYWORDS.any { currentLineUpper.contains(it) || currentNormUpper.contains(it) }
 
         if (currentHasExpiry && !currentHasProd) return DateContext.EXPIRY
         if (currentHasProd && !currentHasExpiry) return DateContext.PRODUCTION
 
-        // Check adjacent lines if current line doesn't have explicit single context
-        val prevUpper = if (index > 0) lines[index - 1].uppercase() else ""
-        val nextUpper = if (index < lines.size - 1) lines[index + 1].uppercase() else ""
+        // Check adjacent lines ONLY if the adjacent line is a label line (does not contain its own date numbers)
+        val hasDigitsPattern = Regex("""\d{4,8}|\d{2}[/.\\-]\d{2}[/.\\-]\d{2,4}""")
 
-        val adjacentHasExpiry = EXPIRY_KEYWORDS.any { prevUpper.contains(it) || nextUpper.contains(it) }
-        val adjacentHasProd = PRODUCTION_KEYWORDS.any { prevUpper.contains(it) || nextUpper.contains(it) }
+        val prevLine = if (index > 0) lines[index - 1] else ""
+        val nextLine = if (index < lines.size - 1) lines[index + 1] else ""
+
+        val prevHasDateDigits = hasDigitsPattern.containsMatchIn(prevLine)
+        val nextHasDateDigits = hasDigitsPattern.containsMatchIn(nextLine)
+
+        val prevUpper = if (index > 0 && !prevHasDateDigits) lines[index - 1].uppercase() + " " + normalizedLines[index - 1].uppercase() else ""
+        val nextUpper = if (index < lines.size - 1 && !nextHasDateDigits) lines[index + 1].uppercase() + " " + normalizedLines[index + 1].uppercase() else ""
+
+        val adjacentHasExpiry = EXPIRY_KEYWORDS.any { (prevUpper.isNotEmpty() && prevUpper.contains(it)) || (nextUpper.isNotEmpty() && nextUpper.contains(it)) }
+        val adjacentHasProd = PRODUCTION_KEYWORDS.any { (prevUpper.isNotEmpty() && prevUpper.contains(it)) || (nextUpper.isNotEmpty() && nextUpper.contains(it)) }
 
         return when {
             adjacentHasExpiry && !adjacentHasProd -> DateContext.EXPIRY
             adjacentHasProd && !adjacentHasExpiry -> DateContext.PRODUCTION
             else -> DateContext.UNKNOWN
+        }
+    }
+
+    private fun normalizeDotMatrixLine(line: String): String {
+        val singleCharCollapsed = line.replace(Regex("""(?<=\b[A-Za-z0-9])\s+(?=[A-Za-z0-9]\b)"""), "")
+        return singleCharCollapsed.replace(Regex("""([A-Za-z]{2,5})[:;.\s]+(?=\d)""")) { match ->
+            "${match.groupValues[1]}:"
         }
     }
 
@@ -252,13 +320,97 @@ object DateParser {
             }
         }
 
-        // 5. OCR Typo Correction (if no valid candidate found from clean regexes)
+        // 5. Try Space-separated Pattern (dd MM yyyy / dd MM yy)
+        PATTERN_SPACE_SEPARATED.findAll(line).forEach { match ->
+            val day = match.groupValues[1].toInt()
+            val month = match.groupValues[2].toInt()
+            var year = match.groupValues[3].toInt()
+            val isTwoDigitYear = match.groupValues[3].length == 2
+            if (isTwoDigitYear) year += 2000
+
+            tryCreateDate(year, month, day)?.let { date ->
+                val warnings = if (isTwoDigitYear) listOf("Tahun dua digit diasumsikan $year") else emptyList()
+                results.add(
+                    DateCandidate(
+                        date = date,
+                        rawText = match.value,
+                        matchedFormat = if (isTwoDigitYear) "dd MM yy" else "dd MM yyyy",
+                        context = context,
+                        confidence = if (context != DateContext.UNKNOWN) CandidateConfidence.HIGH else CandidateConfidence.MEDIUM,
+                        sourceLine = line,
+                        warnings = warnings
+                    )
+                )
+            }
+        }
+
+        // 6. Try Continuous 8-digit Pattern (ddMMyyyy / yyyyMMdd)
+        PATTERN_CONTINUOUS_8DIGIT_DDMMYYYY.findAll(line).forEach { match ->
+            val day = match.groupValues[1].toInt()
+            val month = match.groupValues[2].toInt()
+            val year = match.groupValues[3].toInt()
+
+            tryCreateDate(year, month, day)?.let { date ->
+                results.add(
+                    DateCandidate(
+                        date = date,
+                        rawText = match.value,
+                        matchedFormat = "ddMMyyyy",
+                        context = context,
+                        confidence = if (context != DateContext.UNKNOWN) CandidateConfidence.HIGH else CandidateConfidence.MEDIUM,
+                        sourceLine = line
+                    )
+                )
+            }
+        }
+
+        PATTERN_CONTINUOUS_8DIGIT_YYYYMMDD.findAll(line).forEach { match ->
+            val year = match.groupValues[1].toInt()
+            val month = match.groupValues[2].toInt()
+            val day = match.groupValues[3].toInt()
+
+            tryCreateDate(year, month, day)?.let { date ->
+                results.add(
+                    DateCandidate(
+                        date = date,
+                        rawText = match.value,
+                        matchedFormat = "yyyyMMdd",
+                        context = context,
+                        confidence = if (context != DateContext.UNKNOWN) CandidateConfidence.HIGH else CandidateConfidence.MEDIUM,
+                        sourceLine = line
+                    )
+                )
+            }
+        }
+
+        // 7. Try Continuous 6-digit Pattern (ddMMyy, e.g. 110521, 060521)
+        PATTERN_CONTINUOUS_6DIGIT_DDMMYY.findAll(line).forEach { match ->
+            val day = match.groupValues[1].toInt()
+            val month = match.groupValues[2].toInt()
+            val year2 = match.groupValues[3].toInt()
+            val year = 2000 + year2
+
+            tryCreateDate(year, month, day)?.let { date ->
+                results.add(
+                    DateCandidate(
+                        date = date,
+                        rawText = match.value,
+                        matchedFormat = "ddMMyy",
+                        context = context,
+                        confidence = if (context != DateContext.UNKNOWN) CandidateConfidence.HIGH else CandidateConfidence.MEDIUM,
+                        sourceLine = line,
+                        warnings = listOf("Format 6 digit tanpa pemisah (${match.value}) diasumsikan $day/$month/$year")
+                    )
+                )
+            }
+        }
+
+        // 8. OCR Typo Correction (if no valid candidate found from clean regexes)
         if (results.isEmpty()) {
             PATTERN_TYPO_DATE.findAll(line).forEach { match ->
                 val rawToken = match.value
                 val correctedToken = correctOcrTypos(rawToken)
                 if (correctedToken != rawToken) {
-                    // Try parsing corrected token as dd/MM/yyyy or dd/MM/yy
                     val parts = correctedToken.split('/', '-', '.')
                     if (parts.size == 3) {
                         val day = parts[0].toIntOrNull()
@@ -280,6 +432,53 @@ object DateParser {
                                         confidence = CandidateConfidence.LOW,
                                         sourceLine = line,
                                         warnings = listOf("Koreksi OCR: '$rawToken' diubah menjadi '$correctedToken'")
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            PATTERN_TYPO_CONTINUOUS.findAll(line).forEach { match ->
+                val rawToken = match.value
+                val correctedToken = correctOcrTypos(rawToken)
+                if (correctedToken != rawToken && correctedToken.all { it.isDigit() }) {
+                    if (correctedToken.length == 6) {
+                        val day = correctedToken.substring(0, 2).toIntOrNull()
+                        val month = correctedToken.substring(2, 4).toIntOrNull()
+                        val year2 = correctedToken.substring(4, 6).toIntOrNull()
+                        if (day != null && month != null && year2 != null) {
+                            val year = 2000 + year2
+                            tryCreateDate(year, month, day)?.let { date ->
+                                results.add(
+                                    DateCandidate(
+                                        date = date,
+                                        rawText = rawToken,
+                                        matchedFormat = "OCR Corrected ($correctedToken)",
+                                        context = context,
+                                        confidence = CandidateConfidence.LOW,
+                                        sourceLine = line,
+                                        warnings = listOf("Koreksi OCR: '$rawToken' diubah menjadi '$correctedToken' ($day/$month/$year)")
+                                    )
+                                )
+                            }
+                        }
+                    } else if (correctedToken.length == 8) {
+                        val day = correctedToken.substring(0, 2).toIntOrNull()
+                        val month = correctedToken.substring(2, 4).toIntOrNull()
+                        val year = correctedToken.substring(4, 8).toIntOrNull()
+                        if (day != null && month != null && year != null) {
+                            tryCreateDate(year, month, day)?.let { date ->
+                                results.add(
+                                    DateCandidate(
+                                        date = date,
+                                        rawText = rawToken,
+                                        matchedFormat = "OCR Corrected ($correctedToken)",
+                                        context = context,
+                                        confidence = CandidateConfidence.LOW,
+                                        sourceLine = line,
+                                        warnings = listOf("Koreksi OCR: '$rawToken' diubah menjadi '$correctedToken' ($day/$month/$year)")
                                     )
                                 )
                             }

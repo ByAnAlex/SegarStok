@@ -1,12 +1,17 @@
 package com.segarstok.feature.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.segarstok.core.design.theme.Spacing
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.segarstok.core.design.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -14,12 +19,22 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     Scaffold(
+        containerColor = CanvasBackground,
         topBar = {
             TopAppBar(
-                title = { Text("Pengaturan & Informasi Aplikasi") },
+                title = {
+                    Text(
+                        text = "Pengaturan",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp,
+                            color = Slate900
+                        )
+                    )
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = CanvasBackground,
+                    titleContentColor = Slate900
                 )
             )
         },
@@ -29,75 +44,141 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(Spacing.medium)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(Spacing.medium)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // App Info Card
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(Spacing.medium)) {
-                    Text(text = "SegarStok", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        text = "Aplikasi Pencatat Stok Batch & Pemantau Kedaluwarsa UMKM",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.small))
-                    Text(text = "Versi MVP: 1.0.0", style = MaterialTheme.typography.labelMedium)
-                }
-            }
+            Spacer(modifier = Modifier.height(4.dp))
 
-            // Entitlement & License Card
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                modifier = Modifier.fillMaxWidth()
+            // Card 1: App Info
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = CardSurface,
+                border = BorderStroke(1.dp, CardBorder)
             ) {
-                Column(modifier = Modifier.padding(Spacing.medium)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     Text(
-                        text = "Status Pembelian Satu Kali (One-Time Purchase)",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        text = "SegarStok",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = Slate900
+                        )
                     )
-                    Spacer(modifier = Modifier.height(Spacing.extraSmall))
                     Text(
-                        text = "Status: Mode Demo / Aktif (Seluruh fitur MVP terbuka)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        text = "Pencatat stok batch & pemantau kedaluwarsa UMKM",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 13.sp,
+                            color = Slate500
+                        )
                     )
-                    Spacer(modifier = Modifier.height(Spacing.small))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Catatan: Pembelian satu kali berlaku per usaha untuk satu perangkat utama.",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            // Data Privacy & Offline Notice
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(Spacing.medium)) {
-                    Text(text = "🔒 Privasi Data & Mode Offline", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(Spacing.small))
-                    Text(
-                        text = "SegarStok bekerja secara 100% offline-first. Data stok dan pemindaian foto label diproses secara lokal di perangkat Anda. Tidak ada data bisnis atau foto label yang diunggah ke server cloud.",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Versi MVP 1.0.0",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Slate500
+                        )
                     )
                 }
             }
 
-            // Support & Disclaimer Notice
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(Spacing.medium)) {
-                    Text(text = "ℹ️ Batasan & Dukungan Layanan", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(Spacing.small))
+            // Card 2: Pembelian Satu Kali (teal bg)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = PrimaryTealLight,
+                border = BorderStroke(1.dp, PrimaryTealContainer)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Text(
-                        text = "• Aplikasi ini membantu mencatat tanggal dan memberikan saran keputusan operasional.\n" +
-                               "• Pengguna wajib memeriksa secara fisik kondisi label dan produk sebelum dijual.\n" +
-                               "• Bantuan teknis & perbaikan bug diberikan selama versi didukung.",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Pembelian Satu Kali",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = PrimaryTealDark
+                        )
+                    )
+                    Text(
+                        text = "Mode Demo / Aktif. Berlaku per usaha untuk satu perangkat utama.",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 13.sp,
+                            lineHeight = 20.sp,
+                            color = PrimaryTealDark
+                        )
                     )
                 }
             }
+
+            // Card 3: Privasi Data & Mode Offline
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = CardSurface,
+                border = BorderStroke(1.dp, CardBorder)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Privasi Data & Mode Offline",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = Slate900
+                        )
+                    )
+                    Text(
+                        text = "Bekerja 100% offline-first. Data stok dan foto label diproses lokal; tidak ada data diunggah ke server cloud.",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 13.sp,
+                            lineHeight = 20.sp,
+                            color = Slate900
+                        )
+                    )
+                }
+            }
+
+            // Card 4: Batasan & Dukungan
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = CardSurface,
+                border = BorderStroke(1.dp, CardBorder)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Batasan & Dukungan",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = Slate900
+                        )
+                    )
+                    Text(
+                        text = "Aplikasi membantu mencatat tanggal dan memberi saran. Pengguna wajib memeriksa fisik produk.",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 13.sp,
+                            lineHeight = 20.sp,
+                            color = Slate900
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
